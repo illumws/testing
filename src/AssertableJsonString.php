@@ -257,11 +257,16 @@ class AssertableJsonString implements ArrayAccess, Countable
      * @param array|null $structure
      * @return $this
      */
-    public function assertStructure(array $structure = null): static
+    public function assertStructure(array $structure = null, string|null $responseData = null): static
     {
         if (is_null($structure))
         {
             return $this->assertSimilar($this->decoded);
+        }
+
+        if (!is_null($responseData))
+        {
+            return (new static($responseData))->assertStructure($structure);
         }
 
         foreach ($structure as $key => $value)
@@ -278,7 +283,7 @@ class AssertableJsonString implements ArrayAccess, Countable
             {
                 PHPUnit::assertArrayHasKey($key, $this->decoded);
 
-                $this->assertStructure($structure[$key], $this->decoded[$key]);
+                $this->assertStructure($value, $this->decoded[$key]);
             } else
             {
                 PHPUnit::assertArrayHasKey($value, $this->decoded);

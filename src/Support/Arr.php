@@ -2,8 +2,6 @@
 
 namespace Alms\Testing\Support;
 
-use Illuminate\Support\Collection;
-
 class Arr
 {
     public static function collapse(array $array): array
