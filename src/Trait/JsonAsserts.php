@@ -54,7 +54,9 @@ trait JsonAsserts
     private function getContent(): false|string
     {
         /** @var Response $response */
-        $response = self::getResponse();
+        if (!$response = self::getClient()?->getResponse()) {
+            static::fail('A client must have an HTTP Response to make assertions. Did you forget to make an HTTP request?');
+        }
 
         return $response->getContent();
     }
