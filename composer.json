@@ -1,5 +1,5 @@
 {
-  "name": "alms/testing",
+  "name": "illum/testing",
   "description": "A testing package inspired by Illuminate testing package for symfony",
   "minimum-stability": "stable",
   "license": "MIT",
