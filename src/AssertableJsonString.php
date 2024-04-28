@@ -2,13 +2,13 @@
 
 namespace Alms\Testing;
 
+use Alms\Testing\Assert as PHPUnit;
+use Alms\Testing\Support\Arr;
+use Alms\Testing\Support\Str;
 use ArrayAccess;
 use Closure;
 use Countable;
 use Illuminate\Contracts\Support\Jsonable;
-use Alms\Testing\Support\Arr;
-use Alms\Testing\Support\Str;
-use Alms\Testing\Assert as PHPUnit;
 use JsonSerializable;
 
 class AssertableJsonString implements ArrayAccess, Countable
@@ -24,10 +24,12 @@ class AssertableJsonString implements ArrayAccess, Countable
         if ($jsonable instanceof JsonSerializable)
         {
             $this->decoded = $jsonable->jsonSerialize();
-        } elseif (is_array($jsonable))
+        }
+        elseif (is_array($jsonable))
         {
             $this->decoded = $jsonable;
-        } else
+        }
+        else
         {
             $this->decoded = json_decode($jsonable, true);
         }
@@ -229,7 +231,8 @@ class AssertableJsonString implements ArrayAccess, Countable
         if ($expect instanceof Closure)
         {
             PHPUnit::assertTrue($expect($this->json($path)));
-        } else
+        }
+        else
         {
             PHPUnit::assertSame($expect, $this->json($path));
         }
@@ -257,7 +260,7 @@ class AssertableJsonString implements ArrayAccess, Countable
      * @param array|null $structure
      * @return $this
      */
-    public function assertStructure(array $structure = null, string|null $responseData = null): static
+    public function assertStructure(?array $structure = null, $responseData = null)
     {
         if (is_null($structure))
         {
@@ -279,12 +282,14 @@ class AssertableJsonString implements ArrayAccess, Countable
                 {
                     $this->assertStructure($structure['*'], $responseDataItem);
                 }
-            } elseif (is_array($value))
+            }
+            elseif (is_array($value))
             {
                 PHPUnit::assertArrayHasKey($key, $this->decoded);
 
-                $this->assertStructure($value, $this->decoded[$key]);
-            } else
+                $this->assertStructure($structure[$key], $this->decoded[$key]);
+            }
+            else
             {
                 PHPUnit::assertArrayHasKey($value, $this->decoded);
             }
