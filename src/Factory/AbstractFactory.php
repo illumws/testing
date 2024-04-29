@@ -9,6 +9,8 @@ use Butschster\EntityFaker\EntityFactory\InstanceWithoutConstructorStrategy;
 use Butschster\EntityFaker\Factory;
 use Butschster\EntityFaker\LaminasEntityFactory;
 use Closure;
+use Doctrine\ORM\EntityManagerInterface;
+use Faker\Factory as FakerFactory;
 use Faker\Generator;
 use Psr\Container\ContainerInterface;
 use RuntimeException;
@@ -36,11 +38,15 @@ abstract class AbstractFactory implements FactoryInterface
     /** @var array<Closure> */
     private array $entityStates = [];
 
+    private bool $storeEntities = false;
+
+    protected static ?ContainerInterface $container = null;
+
     private function __construct(
         private readonly array $replaces = [],
     )
     {
-        $this->faker =  $this->withFaker();
+        $this->faker = $this->withFaker();
 
         $this->entityFactory = new Factory(
             new LaminasEntityFactory(
@@ -53,7 +59,20 @@ abstract class AbstractFactory implements FactoryInterface
 
     protected function withFaker(): Generator
     {
-        return \Faker\Factory::create();
+        return FakerFactory::create();
+    }
+
+    protected static function getContainer(): ?ContainerInterface
+    {
+        return self::$container;
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    public static function setContainer(ContainerInterface $container): void
+    {
+        self::$container = $container;
     }
 
     /**
@@ -72,6 +91,12 @@ abstract class AbstractFactory implements FactoryInterface
     {
         $this->amount = $amount;
 
+        return $this;
+    }
+
+    public function willSave(): self
+    {
+        $this->storeEntities = true;
         return $this;
     }
 
@@ -103,46 +128,32 @@ abstract class AbstractFactory implements FactoryInterface
         return $this;
     }
 
-    public function create(): array
+    public function create(EntityManagerInterface $entityManager = null): array
     {
         $entities = $this->object(fn() => $this->definition());
-        if (!\is_array($entities)) {
+        if (!\is_array($entities))
+        {
             $entities = [$entities];
         }
+
+        $this->storeEntities($entities, $entityManager);
 
         $this->callAfterCreating($entities);
 
         return $entities;
     }
 
-    public function createOne(): object
+    public function createOne(EntityManagerInterface $entityManager = null): object
     {
         $entity = $this->object(fn() => $this->definition());
-        if (\is_array($entity)) {
+        if (\is_array($entity))
+        {
             $entity = \array_shift($entity);
         }
+
+        $this->storeEntities([$entity]);
 
         $this->callAfterCreating([$entity]);
-
-        return $entity;
-    }
-
-    public function make(): array
-    {
-        $entities = $this->object(fn() => $this->definition());
-        if (!\is_array($entities)) {
-            $entities = [$entities];
-        }
-
-        return $entities;
-    }
-
-    public function makeOne(): object
-    {
-        $entity = $this->object(fn() => $this->definition());
-        if (\is_array($entity)) {
-            $entity = \array_shift($entity);
-        }
 
         return $entity;
     }
@@ -158,10 +169,27 @@ abstract class AbstractFactory implements FactoryInterface
 
     public function __get(string $name): array
     {
-        return match ($name) {
+        return match ($name)
+        {
             'data' => $this->raw(fn() => $this->definition()),
             default => throw new FactoryException('Undefined magic property.')
         };
+    }
+
+    private function storeEntities(array $entities, EntityManagerInterface|null $entityManager = null): void
+    {
+        if ($entityManager === null)
+        {
+            return;
+        }
+
+        foreach ($entities as $entity)
+        {
+            $entityManager->persist($entity);
+        }
+
+        $entityManager->flush();
+        $entityManager->clear();
     }
 
     /**
@@ -177,16 +205,20 @@ abstract class AbstractFactory implements FactoryInterface
                 new ClosureStrategy(fn(string $class, array $data) => $this->makeEntity($data)),
             )
             ->define($this->entity(), $definition)
-            ->states($this->entity(), $this->states);
+            ->states($this->entity(), $this->states)
+        ;
 
-        foreach ($this->afterMake as $afterMakeCallable) {
+        foreach ($this->afterMake as $afterMakeCallable)
+        {
             $this->entityFactory->afterMaking($this->entity(), $afterMakeCallable);
         }
 
         $result = $this->entityFactory->of($this->entity())->times($this->amount)->make($this->replaces);
 
-        if (\is_array($result)) {
-            return \array_map(function (object $entity) {
+        if (\is_array($result))
+        {
+            return \array_map(function (object $entity)
+            {
                 return $this->applyEntityState($entity);
             }, $result);
         }
@@ -201,7 +233,8 @@ abstract class AbstractFactory implements FactoryInterface
      */
     private function applyEntityState(object $entity): object
     {
-        foreach ($this->entityStates as $state) {
+        foreach ($this->entityStates as $state)
+        {
             $entity = $state($entity);
         }
 
@@ -211,7 +244,8 @@ abstract class AbstractFactory implements FactoryInterface
     /** @internal */
     private function callAfterCreating(array $entities): void
     {
-        foreach ($entities as $entity) {
+        foreach ($entities as $entity)
+        {
             \array_map(static fn(callable $callable) => $callable($entity), $this->afterCreate);
         }
     }
