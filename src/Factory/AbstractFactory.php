@@ -151,7 +151,7 @@ abstract class AbstractFactory implements FactoryInterface
             $entity = \array_shift($entity);
         }
 
-        $this->storeEntities([$entity]);
+        $this->storeEntities([$entity], $entityManager);
 
         $this->callAfterCreating([$entity]);
 
