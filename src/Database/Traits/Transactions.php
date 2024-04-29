@@ -50,7 +50,7 @@ trait Transactions
         
         if ($this->transactionStrategy === null) {
             $this->transactionStrategy = new TransactionStrategy(
-                entityManager: $container->get(EntityManagerInterface::class),
+                entityManager: $container->get('doctrine.orm.entity_manager'),
                 kernel: self::$sharedKernel
             );
         }

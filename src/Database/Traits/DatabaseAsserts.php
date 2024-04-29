@@ -21,6 +21,6 @@ trait DatabaseAsserts
             $entity = $entity::class;
         }
 
-        return new EntityAssertion($alias, $entity, self::$sharedKernel->get->get(EntityManagerInterface::class));
+        return new EntityAssertion($alias, $entity, self::$sharedKernel->get->get('doctrine.orm.entity_manager'));
     }
 }
